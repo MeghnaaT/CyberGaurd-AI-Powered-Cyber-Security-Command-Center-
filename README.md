@@ -1,322 +1,182 @@
 # 🛡️ AI-Powered Cyber Security Command Center
 
-<div align="center">
-
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
-[![Flask](https://img.shields.io/badge/Flask-3.1.2-green.svg)](https://flask.palletsprojects.com/)
-[![Status: Active](https://img.shields.io/badge/Status-Active-brightgreen.svg)]()
-
-**An intelligent, educational cybersecurity platform for threat detection, phishing analysis, and security awareness training.**
-
-[Features](#-features) • [Quick Start](#-quick-start) • [Architecture](#-architecture)
-
-</div>
+A Flask-based cybersecurity toolkit with a unified dashboard, modular analyzers (URL, file, IP/domain, email headers), and an integrated AI chat assistant.
 
 ---
 
-## 📋 Overview
+## 📌 What This Project Does
 
-AI-Powered Cyber Security Command Center is a **production-ready educational platform** that combines static file analysis, ML-based phishing detection, and interactive security training. Built with Flask and Hugging Face Transformers, it provides explainable AI-driven threat assessments suitable for SOCs, security training, and cybersecurity education.
+This project provides practical, explainable security checks for common threat-hunting tasks:
 
-### Key Highlights
-✨ **BERT-based Phishing Detection** using Hugging Face transformers  
-🔍 **Advanced File Threat Analysis** with magic number & entropy detection  
-🔐 **Real-time Password Strength Assessment** with actionable feedback  
-📊 **Explainable AI Layer** for threat interpretation  
-🎯 **Interactive Security Training** with simulated attacks  
-⚡ **Fast, Lightweight & Safe** - no file execution, memory-safe analysis
+- **URL Analyzer** for phishing-style URL heuristics, SSL checks, and WHOIS snippets
+- **File Scanner** for static file inspection (hashes, magic signatures, entropy, threat rules)
+- **IP / Domain Lookup** for DNS resolution + lightweight OSINT enrichment
+- **Email Header Analyzer** for SPF/DKIM/DMARC risk scoring
+- **Dashboard Summary** with recent scan history and aggregate threat score
+- **AI Chat Assistant** (`/ask-ai`) with Gemini model auto-selection and safe fallback mode
 
----
+It also retains educational legacy tools:
 
-## 🎯 Features
-
-### 📁 Advanced File Threat Scanner
-*Analyzes file headers, entropy, and metadata to detect malicious or suspicious files without executing them.*
-
-**Deep static file analysis with multiple detection vectors:**
-
-- **Magic Number Detection** - Identifies 7+ file types (JPEG, PNG, PDF, ZIP, EXE, ELF, etc.)
-- **Shannon Entropy Analysis** - Detects encrypted/packed payloads
-- **MIME Type Detection** - Uses libmagic for accurate content validation
-- **Metadata Extraction** - Pulls EXIF from images, page count from PDFs
-- **Risk Scoring** - Heuristic-based threat assessment (0-100)
-- **Extension Mismatch Detection** - Flags mismatched file types
-- **Hash-based Analysis** - SHA256 fingerprinting for file tracking
-
-**Example Output:**
-```json
-{
-  "filename": "document.pdf",
-  "size": "99061 bytes",
-  "detected_type": "PDF Document",
-  "entropy": "0.22%",
-  "magic number" :  "255044462D312E34",
-  "Status": "OK"
-}
-```
-
-### 🎣 AI-Powered Phishing Detector
-*Detects phishing URLs and spam messages using BERT-based ML and advanced domain impersonation checks.*
-
-**Dual-layer phishing detection combining URL analysis & ML:**
-
-- **Hugging Face BERT Model** - `mrm8488/bert-tiny-finetuned-sms-spam-detection`
-- **URL Structural Analysis** - Detects suspicious domains & patterns
-- **Brand Impersonation Detection** - Identifies lookalike domains
-- **Homoglyph Detection** - Catches visual tricks (rn → m, 0 → O)
-- **Suspicious TLD Detection** - Flags risky domains (.tk, .ml, .cf, .gq, .zip)
-- **Risk Scoring** - Multi-factor threat assessment (0-100)
-
-### 🔐 Password Strength Analyzer
-*Evaluates password strength by scoring length, complexity, and character variety with personalized feedback.*
-
-**Intelligent password evaluation with character-level analysis:**
-
-| Criterion | Points | Requirement |
-|-----------|--------|-------------|
-| Length | 30 pts | ≥ 12 characters |
-| Uppercase | 20 pts | A-Z present |
-| Lowercase | 20 pts | a-z present |
-| Numbers | 15 pts | 0-9 present |
-| Special Characters | 15 pts | !@#$%^&*()-_+= |
-| **Total** | **100 pts** | Strength score |
-
-**Strength Levels:**
-- 0-49: Weak
-- 50-79: Moderate
-- 80-100: Strong
-
-### 🎯 Phishing Awareness Training
-*Provides interactive simulations of phishing attacks to educate users on recognizing and avoiding threats.*
-
-- Interactive phishing simulation environment
-- Educational attack scenarios
-- Safe, controlled testing ground
-- Logs and feedback for learning
-
-### 🌐 Live Network Attack Visualizer
-*Displays simulated network attacks with source IPs and attack types for security awareness and SOC training.*
-
-- Real-time attack log display
-- Simulated attack types: port scans, brute force, suspicious downloads
-- Source IP tracking
-- Attack timeline visualization
+- `/analyze-phishing` (legacy heuristic endpoint)
+- `/scan-file` (legacy compatibility wrapper)
+- password strength checker
+- phishing simulation and attack-log demos
 
 ---
 
-## 🏗️ Architecture & Design
+## 🧱 Current Architecture
 
-### Core Components
+### Backend
+- **Framework:** Flask + Flask-CORS
+- **Main app:** `app.py`
+- **Data store:** in-memory `scan_history` list (for dashboard/summary)
+- **AI Integration:** `google.generativeai` with runtime model discovery via `genai.list_models()`
 
-| Module | Purpose | Key Features |
-|--------|---------|--------------|
-| `app.py` | Flask API server | 5 endpoints, CORS, logging |
-| `file_analyzer.py` | File threat analysis | Magic detection, entropy, metadata |
-| `phishing_ai.py` | BERT model integration | ML inference, confidence scoring |
-| `ai_engine.py` | Explainable AI layer | Rule-based threat assessment |
-| `entropy.py` | Shannon entropy calculation | Byte sequence analysis |
-
-### Tech Stack
-- **Backend:** Flask 3.1.2, Python 3.8+
-- **AI/ML:** Hugging Face Transformers, BERT-tiny
-- **File Analysis:** python-magic, Pillow, PyPDF2
-- **Frontend:** HTML5, CSS3, Vanilla JavaScript
-- **Data:** NumPy, OpenCV (optional visual analysis)
+### Frontend
+- **Template:** `templates/index.html` (panel-based pages)
+- **Client:** `static/script.js` (async fetch calls + human-readable result renderers)
+- **Styling:** `static/style.css` (glassmorphism, dark/light theme, global chatbot)
+- **Extras:** Chart.js + jsPDF loaded from CDN for dashboard/reporting flows
 
 ---
 
-## 🚀 Quick Start
+## ✅ Features
 
-### Prerequisites
-- **Python 3.8 or higher**
-- **pip** (Python package manager)
-- **~500MB disk space** (includes Hugging Face model cache)
+## 1) URL Analyzer (`POST /api/url-analyzer`)
+Checks:
+- Long URL
+- Too many dots/subdomains
+- Suspicious TLDs (`.xyz`, `.top`, `.tk`, `.zip`, `.gq`, `.cf`)
+- IP used as domain
+- Abnormal ports
+- SSL certificate validation (for HTTPS URLs)
+- WHOIS lookup excerpt
 
+Response includes: normalized URL, findings, risk score, verdict, SSL info, WHOIS details.
 
+## 2) File Scanner (`POST /api/file-scanner`)
+Checks:
+- MD5 and SHA256 hashes
+- File signature from magic bytes (JPEG/PNG/PDF/ZIP/EXE/ELF)
+- Shannon entropy
+- Risk rules for executables, high entropy, risky extensions, tiny unknown payloads
 
-### First Test
+Response includes: signature, entropy, rule hits, threat score, and verdict.
 
-**Try the file scanner:**
-1. Navigate to "📁 File Threat Scanner"
-2. Upload any file (PDF, image, EXE, etc.)
-3. View detailed analysis including entropy, detected type, and AI risk assessment
+## 3) IP / Domain Lookup (`POST /api/ip-lookup`)
+Checks:
+- IP validation or domain resolution
+- DNS A/AAAA extraction for domains
+- OSINT enrichment from `ip-api.com`
+- Basic risk scoring signals
 
-**Test phishing detection:**
-1. Go to "🎣 AI Phishing Detector"
-2. Paste: ` http://pay-pal.tk`
-3. See risk score and detailed threat indicators
+## 4) Email Header Analyzer (`POST /api/email-analyzer`)
+Checks:
+- Parses raw headers
+- Reads `Authentication-Results`
+- SPF / DKIM / DMARC pass/fail
+- Reply-To mismatch heuristic
+- Risk score + verdict
 
-## 🔌 API Reference
+## 5) Dashboard Summary (`GET /api/dashboard-summary`)
+Provides:
+- module scan counts
+- recent scans
+- total scans
+- computed final threat score
 
-### File Analysis
-**Endpoint:** `POST /scan-file`
+## 6) AI Assistant
+- `GET /ai-status`: returns current model config status
+- `POST /ask-ai`: answers cybersecurity questions
+  - Uses Gemini model when available
+  - Falls back gracefully if model is unavailable
 
-**Request:**
+---
+
+## 🔌 API Reference (Quick)
+
+### URL Analyzer
 ```bash
-curl -X POST -F "file=@/path/to/file" http://127.0.0.1:5000/scan-file
-```
-
-**Response:**
-```json
-{
-  "filename": "document.pdf",
-  "size_bytes": 245891,
-  "detected_type": "pdf",
-  "byte_diversity": 7.234,
-  "entropy_percentage": "90.42%",
-  "magic_number": "25504446",
-  "status": "ok"
-}
-```
-
----
-
-### Phishing Analysis
-**Endpoint:** `POST /analyze-phishing`
-
-**Request:**
-```bash
-curl -X POST http://127.0.0.1:5000/analyze-phishing \
+curl -X POST http://127.0.0.1:5000/api/url-analyzer \
   -H "Content-Type: application/json" \
-  -d '{"text":"Verify your bank account at http://secure-bank.tk"}'
-```
-
-**Response:**
-```json
-{
-  "verdict": "High Risk 🚩 Likely Phishing",
-  "risk_score": 65,
-  "reasons": [
-    "Suspicious TLD: .tk",
-    "Looks like fake version of bank.com",
-    "Contains @ symbol"
-  ]
-}
-```
-
----
-
-### Password Analysis
-**Endpoint:** `POST /check-password`
-
-**Request:**
-```bash
-curl -X POST http://127.0.0.1:5000/check-password \
+  -d '{"url":"https://example.xyz:8080/login"}'
+File Scanner
+curl -X POST http://127.0.0.1:5000/api/file-scanner \
+  -F "file=@/path/to/file.pdf"
+IP / Domain Lookup
+curl -X POST http://127.0.0.1:5000/api/ip-lookup \
   -H "Content-Type: application/json" \
-  -d '{"password":"P@ssw0rd123!"}'
-```
+  -d '{"indicator":"8.8.8.8"}'
+Email Header Analyzer
+curl -X POST http://127.0.0.1:5000/api/email-analyzer \
+  -H "Content-Type: application/json" \
+  -d '{"headers":"From: test@example.com\nAuthentication-Results: spf=pass dkim=pass dmarc=pass"}'
+AI Chat
+curl -X POST http://127.0.0.1:5000/ask-ai \
+  -H "Content-Type: application/json" \
+  -d '{"question":"What is phishing?"}'
+🖥️ UI Notes
+Dashboard and tools are served from:
 
-**Response:**
-```json
-{
-  "score": 100,
-  "strength": "Strong",
-  "feedback": []
-}
-```
+/dashboard
 
----
+/url-analyzer
 
-### Attack Visualization
-**Endpoint:** `GET /view-attacks`
+/file-scanner
 
-**Response:**
-```json
-{
-  "attacks": [
-    {"time": "10:01", "type": "Port scan", "src": "192.168.1.5"},
-    {"time": "10:02", "type": "Brute force", "src": "45.12.89.34"},
-    {"time": "10:03", "type": "Suspicious download", "src": "103.45.22.9"}
-  ]
-}
-```
+/ip-lookup
 
----
+/email-analyzer
 
-### Phishing Training
-**Endpoint:** `GET /start-simulation`
+Theme toggle (dark/light) is persisted in localStorage
 
-**Response:**
-```json
-{
-  "message": "Simulation started — a fake phishing email was generated (educational only)."
-}
-```
+Chatbot widget is globally available in the UI
 
----
+Tool outputs are rendered in human-readable format (not raw JSON dumps)
 
-## 📊 Performance & Specifications
+🚀 Local Setup
+1) Create and activate virtual environment
+macOS/Linux
+python -m venv venv
+source venv/bin/activate
+Windows (PowerShell)
+python -m venv venv
+venv\Scripts\Activate.ps1
+2) Install dependencies
+pip install -r requirements.txt
+3) Configure environment
+Create a .env file in project root:
 
-| Metric | Value |
-|--------|-------|
-| File Upload Limit | No hard limit (configurable) |
-| Analysis Speed | < 1 second per file |
-| BERT Inference Time | < 500ms per URL |
-| Memory Usage | ~1.5GB (BERT model loaded) |
-| Supported File Types | 7+ (JPEG, PNG, PDF, ZIP, EXE, ELF, etc.) |
-| Concurrent Users | 10+ (development mode) |
+GEMINI_API_KEY=your_api_key_here
+If GEMINI_API_KEY is not valid/available, chat still works in fallback mode.
 
----
+4) Run
+python app.py
+Open: http://127.0.0.1:5000
 
-## 🎓 Use Cases
+📁 Important Files
+app.py — Flask routes, analyzers, scoring, AI integration
 
-### 1. **Cybersecurity Education**
-- Teach students file format analysis
-- Demonstrate phishing detection techniques
-- Train security professionals on threat assessment
+templates/index.html — main UI structure
 
-### 2. **Enterprise Training**
-- Security awareness programs
-- Phishing simulation exercises
-- File threat handling procedures
+static/script.js — frontend behaviors + API calls + renderers
 
-### 3. **SOC/Security Operations**
-- Initial triage of suspicious files
-- Phishing email analysis
-- Educational training environment
+static/style.css — theme/glassmorphism/chat styles
 
-### 4. **Development & Research**
-- Study Flask + ML integration
-- Learn about static analysis techniques
-- Explore Hugging Face model deployment
+requirements.txt — Python dependencies
 
----
+⚠️ Security & Deployment Notes
+This project is intended for learning/prototyping and controlled analysis workflows.
 
-## 🔒 Security Considerations
+Flask debug server is not production-ready.
 
-| Aspect | Details |
-|--------|---------|
-| **File Execution** | ✅ **Safe** - Static analysis only, no execution |
-| **Data Retention** | ✅ **Secure** - Files not stored permanently |
-| **CORS Policy** | ✅ **Enabled** - Safe cross-origin API access |
-| **Input Validation** | ✅ **Enforced** - All inputs sanitized |
-| **Logging** | ✅ **Enabled** - For audit trails |
-| **HTTPS** | ⚠️ Development mode (use reverse proxy for production) |
-| **Authentication** | ⚠️ None (educational tool, deploy with auth layer) |
+For production deployment, use a proper WSGI server + reverse proxy + TLS.
 
----
+Add auth/rate limiting before exposing publicly.
 
-## 📦 Dependencies
+WHOIS / OSINT lookups depend on external network availability.
 
-**Core Dependencies:**
-- Flask 3.1.2 - Web framework
-- transformers - Hugging Face models
-- pillow - Image processing
-- PyPDF2 - PDF reading
-- python-magic - File type detection
-- opencv-python - Image analysis
-- numpy - Numerical computing
+📜 Disclaimer
+This tool is for educational and authorized security analysis purposes only.
+Use responsibly and only on data/systems you own or are permitted to test.
 
-See `requirements.txt` for complete list (24 packages total).
-
-## ⚖️ Disclaimer
-
-> **⚠️ Educational Purpose Only**
-> 
-> This tool is designed for **educational and authorized security testing only**. 
-
-**Made with ❤️ for the cybersecurity community**
-
-[⬆ back to top](#-ai-powered-cyber-security-command-center)
-
-</div>

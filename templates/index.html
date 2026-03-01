@@ -1,146 +1,157 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>AI-Powered Cyber Security Suite</title>
-    <link rel="stylesheet" href="/static/style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cyber Security Command Center</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
 <body>
-
-<!-- Hero Section -->
-<!-- Navigation Bar -->
-<nav class="navbar">
-    <div class="nav-container">
-        <a href="/" class="nav-logo">🛡️ Cyber Security Suite</a>
-        <ul class="nav-menu">
-            <li><a href="/" class="nav-link active">Tools</a></li>
-            <li><a href="/info" class="nav-link">Learn</a></li>
-            <li><a href="/about" class="nav-link">About</a></li>
-        </ul>
+  <nav class="navbar">
+    <a href="/dashboard" class="logo">🛡 Cyber Security Suite</a>
+    <div class="nav-links">
+      <a href="/dashboard" class="{{ 'active' if active_page=='dashboard' else '' }}">Dashboard</a>
+      <a href="/url-analyzer" class="{{ 'active' if active_page=='url' else '' }}">URL Analyzer</a>
+      <a href="/file-scanner" class="{{ 'active' if active_page=='file' else '' }}">File Scanner</a>
+      <a href="/ip-lookup" class="{{ 'active' if active_page=='ip' else '' }}">IP Lookup</a>
+      <a href="/email-analyzer" class="{{ 'active' if active_page=='email' else '' }}">Email Analyzer</a>
+      <a href="/info">Learn</a>
+      <a href="/about">About</a>
     </div>
-</nav>
+  </nav>
 
-<section class="hero">
-    <h1>🛡 AI-Powered Cyber Security Command Center</h1>
-    <p>Intelligent tools to detect cyber threats, prevent attacks and improve digital safety.</p>
-</section>
+  <main class="container">
+    <!-- ORIGINAL-STYLE DASHBOARD LAYOUT -->
+    <section class="panel {{ 'show' if active_page=='dashboard' else '' }}" id="dashboard-panel">
+      <section class="hero">
+        <h1>🛡 AI-Powered Cyber Security Command Center</h1>
+        <p>Intelligent tools to detect cyber threats, prevent attacks and improve digital safety.</p>
+      </section>
 
-<!-- About Section -->
-<section class="about">
-    <h2>About This Website</h2>
-    <p class="about-text">
-        This Website was created to help people understand modern cyber threats in a simple and safe way.
-        Many people fall victim to phishing, malware and weak passwords every day due to lack of awareness.
-        This platform provides easy-to-use security tools that detect threats, analyze suspicious content,
-        and visually demonstrate how cyber attacks work.
-    </p>
+      <section class="about">
+        <h2>About This Website</h2>
+        <p class="about-text">
+          This Website was created to help people understand modern cyber threats in a simple and safe way.
+          Many people fall victim to phishing, malware and weak passwords every day due to lack of awareness.
+          This platform provides easy-to-use security tools that detect threats, analyze suspicious content,
+          and visually demonstrate how cyber attacks work.
+        </p>
+      </section>
 
-    <div class="about-gap"></div>
-
-    <p class="about-text">
-        <strong>Problem it solves:</strong> Lack of cybersecurity awareness, unsafe digital habits, and no easy educational
-        platform for beginners to test and understand cyber risks.
-    </p>
-</section>
-
-<!-- Tools Grid -->
-<div class="tools-grid">
-
-    <div class="tool-box">
-        <h3>📁 File Threat Scanner</h3>
-        <p class="tool-description">Upload any file to detect malware, suspicious content, and analyze encryption.</p>
-        <input type="file" id="fileInput">
-        <button onclick="scanFile()">Scan File</button>
-        <pre id="fileResult" class="result-box">Result will appear here...</pre>
-    </div>
-
-    <div class="tool-box">
-        <h3>🎣 AI Phishing Detector</h3>
-        <p class="tool-description">Paste a URL or message to identify phishing attempts and malicious links.</p>
-        <textarea id="phishText" placeholder="Paste suspicious message…"></textarea>
-        <button onclick="analyzePhishing()">Analyze Message</button>
-        <div id="phishResult" class="scan-result" style="display:none;">
-
-    <p><strong>Verdict:</strong> <span id="verdictOutput"></span></p>
-    <p><strong>Risk Score:</strong> <span id="riskScoreOutput"></span></p>
-
-    <p><strong>Reasons:</strong></p>
-    <div id="reasonsListBox"></div>
-
-</div>
-
-
-    </div>
+      <div class="tools-grid">
+        <div class="tool-box">
+          <h3>📁 File Threat Scanner</h3>
+          <p class="tool-description">Upload any file to detect malware, suspicious content, and analyze encryption.</p>
+          <input type="file" id="fileInput">
+          <button onclick="scanFile()">Scan File</button>
+          <pre id="fileResult" class="result-box">Result will appear here...</pre>
+        </div>
 
         <div class="tool-box">
-        <h3>🔐 Password Strength Analyzer</h3>
-        <p class="tool-description">Test how strong your password is and get tips to make it more secure.</p>
-        <div class="password-input-wrapper">
-            <input type="password" id="passwordInput" placeholder="Enter password">
-            <button class="toggle-password-btn" onclick="togglePasswordVisibility()" title="Show/Hide Password">👁️</button>
+          <h3>🎣 AI Phishing Detector</h3>
+          <p class="tool-description">Paste a URL or message to identify phishing attempts and malicious links.</p>
+          <textarea id="phishText" placeholder="Paste suspicious message…"></textarea>
+          <button onclick="analyzePhishing()">Analyze Message</button>
+          <div id="phishResult" class="scan-result" style="display:none;">
+            <p><strong>Verdict:</strong> <span id="verdictOutput"></span></p>
+            <p><strong>Risk Score:</strong> <span id="riskScoreOutput"></span></p>
+            <p><strong>Reasons:</strong></p>
+            <div id="reasonsListBox"></div>
+          </div>
         </div>
-        <button onclick="checkPassword()">Check Strength</button>
-        <div id="passwordResult">
-    <ul class="suggestions-list" id="suggestionsList"></ul>
-</div>
 
-    </div>
+        <div class="tool-box">
+          <h3>🔐 Password Strength Analyzer</h3>
+          <p class="tool-description">Test how strong your password is and get tips to make it more secure.</p>
+          <div class="password-input-wrapper">
+            <input type="password" id="passwordInput" placeholder="Enter password">
+          </div>
+          <button onclick="checkPassword()">Check Strength</button>
+          <div id="passwordResult"></div>
+        </div>
 
-    <div class="tool-box">
-        <h3>🎯 Phishing Awareness Training</h3>
-        <p class="tool-description">Learn how phishing attacks work through interactive simulated scenarios.</p>
-        <button onclick="startSimulation()">Start Simulation</button>
-        <pre id="simulationResult" class="result-box">Simulation will appear here...</pre>
-    </div>
+        <div class="tool-box">
+          <h3>🎯 Phishing Awareness Training</h3>
+          <p class="tool-description">Learn how phishing attacks work through interactive simulated scenarios.</p>
+          <button onclick="startSimulation()">Start Simulation</button>
+          <pre id="simulationResult" class="result-box">Simulation will appear here...</pre>
+        </div>
+      </div>
 
-</div>
+      <div class="center-box">
+        <div class="tool-box">
+          <h3>🌐 Live Network Attack Visualizer</h3>
+          <p class="tool-description">See real-world examples of network attacks and understand common threat patterns.</p>
+          <button onclick="viewAttacks()">View Attacks</button>
+          <pre id="attackResult" class="result-box">Attack logs will appear here...</pre>
+        </div>
+      </div>
+    </section>
 
-<!-- Center Box -->
-<div class="center-box">
-    <div class="tool-box">
-        <h3>🌐 Live Network Attack Visualizer</h3>
-        <p class="tool-description">See real-world examples of network attacks and understand common threat patterns.</p>
-        <button onclick="viewAttacks()">View Attacks</button>
-        <pre id="attackResult" class="result-box">Attack logs will appear here...</pre>
-    </div>
-</div>
+    <!-- New module pages remain available -->
+    <section class="panel {{ 'show' if active_page=='url' else '' }}" id="url-panel">
+      <h2>URL Analyzer</h2>
+      <input id="urlInput" placeholder="https://example.xyz:8080/login" />
+      <button onclick="analyzeUrl()">Analyze URL</button>
+      <pre id="urlResult"></pre>
+    </section>
 
+    <section class="panel {{ 'show' if active_page=='file' else '' }}" id="file-panel">
+      <h2>File Scanner</h2>
+      <input type="file" id="moduleFileInput" />
+      <button onclick="scanFileModule()">Scan File</button>
+      <pre id="moduleFileResult"></pre>
+    </section>
 
-<!-- Footer -->
-<footer>
+    <section class="panel {{ 'show' if active_page=='ip' else '' }}" id="ip-panel">
+      <h2>IP / Domain Lookup</h2>
+      <input id="ipInput" placeholder="8.8.8.8 or example.com" />
+      <button onclick="lookupIP()">Lookup</button>
+      <pre id="ipResult"></pre>
+    </section>
+
+    <section class="panel {{ 'show' if active_page=='email' else '' }}" id="email-panel">
+      <h2>Email Header Analyzer</h2>
+      <textarea id="emailHeaders" rows="10" placeholder="Paste full email headers here"></textarea>
+      <button onclick="analyzeEmail()">Analyze Headers</button>
+      <pre id="emailResult"></pre>
+    </section>
+  </main>
+
+  <footer>
     <p>© 2025 Cyber Security Command Center | Built by Meghna Tiwari</p>
     <p>
-        LinkedIn:
-        <a href="https://www.linkedin.com/in/meghna-tiwari-m24/" target="_blank">
-            meghna-tiwari-m24
-        </a> |
-        Email:
-        <a href="mailto:meghnatw24@gmail.com">
-            meghnatw24@gmail.com
-        </a>
+      LinkedIn:
+      <a href="https://www.linkedin.com/in/meghna-tiwari-m24/" target="_blank">meghna-tiwari-m24</a> |
+      Email:
+      <a href="mailto:meghnatw24@gmail.com">meghnatw24@gmail.com</a>
     </p>
-</footer>
+  </footer>
 
-<button id="themeToggle" class="theme-toggle">☀️</button>
-<!-- Floating Chat Button -->
-<div id="chat-fab" onclick="toggleChat()">🤖</div>
 
-<!-- Chat Window -->
+<button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">☀️</button>
+
+<div id="chat-fab" onclick="toggleChat()" aria-label="Open AI chat">🤖</div>
+
 <div id="chat-widget">
-    <div class="chat-header">
-        <span>CyberGuard AI</span>
-        <button onclick="toggleChat()">✕</button>
-    </div>
+  <div class="chat-header">
+    <span>CyberGuard AI</span>
+    <button type="button" onclick="toggleChat()">✕</button>
+  </div>
 
-    <div id="chat-messages"></div>
+  <div id="chat-messages"></div>
 
-    <div class="chat-input">
-        <input id="chat-text" tabindex="0" aria-label="Ask cybersecurity question" placeholder="Ask cybersecurity question..." />
-        <button onclick="sendChat()">Send</button>
-    </div>
+  <div class="chat-input">
+    <input id="chat-text" tabindex="0" aria-label="Ask cybersecurity question" placeholder="Ask cybersecurity question..." />
+    <button type="button" onclick="sendChat()">Send</button>
+  </div>
 </div>
 
-<script src="/static/script.js"></script>
-
+  <script>
+    window.activePage = "{{ active_page }}";
+  </script>
+  <script src="/static/script.js"></script>
 </body>
 </html>

@@ -1,411 +1,396 @@
-/******************************
- 🔥 GLOBAL THEME TOGGLE
-******************************/
-const themeToggle = document.getElementById("themeToggle"); //Find the button with ID themeToggle
- //Toggle light/dark mode, when clicked,  it adds/removes the light-mode class on <body> (used by CSS to switch themes)
-themeToggle.addEventListener("click", () => {
-    document.body.classList.toggle("light-mode");
+let moduleChart;
+let latestModuleResults = [];
 
-    if (document.body.classList.contains("light-mode")) {
-        themeToggle.innerText = "🌙";
-    } else {
-        themeToggle.innerText = "☀️";
-    } //Change button icon based on current theme
-});
-/******************************
- 👁️ PASSWORD VISIBILITY TOGGLE
-******************************/
-function togglePasswordVisibility() {
-  const passwordInput = document.getElementById("passwordInput");
-  const toggleBtn = document.querySelector(".toggle-password-btn");
-  
-  // Toggle the input type between password and text i,e., switches between hiding(password) and showing (text) the password
-  if (passwordInput.type === "password") {
-    passwordInput.type = "text";
-    toggleBtn.textContent = "🙈";  // Changed eye icon
-  } else { 
-    passwordInput.type = "password";
-    toggleBtn.textContent = "👁️";  // Back to eye icon
-  }
+function joinLines(lines = []) {
+  return lines.filter(Boolean).join('\n');
 }
 
-/******************************
- 📂 FILE SCANNER
-******************************/
-function scanFile() { 
-  const fileInput = document.getElementById("fileInput");
-  const resultBox = document.getElementById("fileResult"); //Finds the file input and result display box
- 
+function bulletList(items = []) {
+  if (!items.length) return '  • None';
+  return items.map((item) => `  • ${item}`).join('\n');
+}
+
+function renderLegacyFileResult(data) {
+  return joinLines([
+    `📁 File: ${data.filename || '-'}`,
+    `📦 Size: ${data.size_bytes ?? '-'} bytes`,
+    `🧪 Detected Type: ${data.detected_type || '-'}`,
+    `📊 Entropy: ${data.entropy_percentage || '-'}`,
+    `ℹ️ Status: ${data.status || '-'}${data.message ? ` (${data.message})` : ''}`
+  ]);
+}
+
+function renderUrlResult(data) {
+  if (data.error) return `❌ ${data.error}`;
+  return joinLines([
+    `🌐 URL: ${data.url || '-'}`,
+    `🧭 Hostname: ${data.hostname || '-'}`,
+    `🔌 Port: ${data.port ?? 'Default'}`,
+    `📈 Risk Score: ${data.risk_score ?? 0}/100`,
+    `🛡 Verdict: ${data.verdict || '-'}`,
+    '',
+    '🔍 Findings:',
+    bulletList(data.findings || []),
+    '',
+    `🔐 SSL: ${data.ssl?.valid ? 'Valid' : 'Not valid / unavailable'}`,
+    data.ssl?.days_left !== undefined && data.ssl?.days_left !== null ? `⏳ SSL Days Left: ${data.ssl.days_left}` : '',
+    data.ssl?.error ? `⚠️ SSL Note: ${data.ssl.error}` : '',
+    '',
+    `🗂 WHOIS Server: ${data.whois_server || 'N/A'}`,
+    data.whois_error ? `⚠️ WHOIS Error: ${data.whois_error}` : '',
+    data.whois_excerpt ? `📝 WHOIS Excerpt:\n${String(data.whois_excerpt).slice(0, 900)}` : ''
+  ]);
+}
+
+function renderFileModuleResult(data) {
+  if (data.error) return `❌ ${data.error}`;
+  return joinLines([
+    `📁 File: ${data.filename || '-'}`,
+    `📦 Size: ${data.size_bytes ?? '-'} bytes`,
+    `🧪 Signature: ${data.signature || '-'}`,
+    `🧬 MD5: ${data.md5 || '-'}`,
+    `🔒 SHA256: ${data.sha256 || '-'}`,
+    `📊 Entropy: ${data.entropy ?? '-'}`,
+    `📈 Threat Score: ${data.threat_score ?? 0}/100`,
+    `🛡 Verdict: ${data.threat_verdict || '-'}`,
+    '',
+    '⚠️ Triggered Rules:',
+    bulletList(data.rules_triggered || [])
+  ]);
+}
+
+function renderIpResult(data) {
+  if (data.error) return `❌ ${data.error}`;
+  const osint = data.osint || {};
+  const dnsRecords = data.dns_records || {};
+  const resolvedRecords = dnsRecords['A/AAAA'] || [];
+
+  return joinLines([
+    `🌍 Indicator: ${data.indicator || '-'}`,
+    `🧭 Resolved IP: ${data.resolved_ip || 'Not resolved'}`,
+    `📈 Risk Score: ${data.risk_score ?? 0}/100`,
+    '',
+    '🧾 DNS Records:',
+    resolvedRecords.length ? bulletList(resolvedRecords) : (dnsRecords.error ? `  • Error: ${dnsRecords.error}` : '  • None'),
+    '',
+    '🛰 OSINT:',
+    `  • Status: ${osint.status || 'N/A'}`,
+    `  • Country: ${osint.country || 'N/A'}`,
+    `  • Region: ${osint.regionName || 'N/A'}`,
+    `  • City: ${osint.city || 'N/A'}`,
+    `  • ISP: ${osint.isp || 'N/A'}`,
+    `  • Org: ${osint.org || 'N/A'}`,
+    `  • ASN: ${osint.as || 'N/A'}`,
+    osint.error ? `  • Error: ${osint.error}` : ''
+  ]);
+}
+
+function renderEmailResult(data) {
+  if (data.error) return `❌ ${data.error}`;
+  return joinLines([
+    `📨 From: ${data.from || '-'}`,
+    `↩️ Reply-To: ${data.reply_to || '-'}`,
+    `📬 Received Hops: ${data.received_hops ?? 0}`,
+    `🛡 Verdict: ${data.verdict || '-'}`,
+    `📈 Risk Score: ${data.risk_score ?? 0}/100`,
+    '',
+    `SPF: ${String(data.spf || '-').toUpperCase()}`,
+    `DKIM: ${String(data.dkim || '-').toUpperCase()}`,
+    `DMARC: ${String(data.dmarc || '-').toUpperCase()}`,
+    '',
+    '🔍 Findings:',
+    bulletList(data.findings || [])
+  ]);
+}
+
+async function analyzeUrl() {
+  const value = document.getElementById('urlInput')?.value.trim();
+  const box = document.getElementById('urlResult');
+  if (!value || !box) return;
+  box.textContent = 'Analyzing...';
+  const res = await fetch('/api/url-analyzer', {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({url: value})
+  });
+  const data = await res.json();
+  box.textContent = renderUrlResult(data);
+  if (!data.error) latestModuleResults.push({module: 'URL Analyzer', score: data.risk_score || 0, summary: data.verdict});
+  loadDashboard();
+}
+
+// File scanner used in original dashboard
+async function scanFile() {
+  const fileInput = document.getElementById('fileInput');
+  const box = document.getElementById('fileResult');
+  if (!fileInput || !box) return;
   if (!fileInput.files.length) {
-    resultBox.innerHTML = "❌ Please select a file.";
-    return; //If no file is selected, show error and exit
+    box.textContent = 'Please choose a file';
+    return;
   }
-
+  box.textContent = 'Scanning...';
   const formData = new FormData();
-  formData.append("file", fileInput.files[0]); //creates a form and attaches the selected file
-
-  resultBox.innerHTML = "⏳ Scanning file..."; //shows a loading message
-
-  fetch("/scan-file", { //Sends the file to the flask backend at /scan-file.
-    method: "POST",
-    body: formData
-  })
-    .then(res => res.json())
-    .then(data => {
-      if (data.error) {
-        resultBox.innerHTML = "❌ " + data.error;
-        return; //if the server returns an error, show it
-      }
-
-      resultBox.innerHTML = `
-📄 File Name: ${data.filename}
-📦 Size: ${data.size_bytes} bytes
-🧬 Detected Type: ${data.detected_type}
-📊 Entropy: ${data.entropy_percentage}
-🔢 Magic Number: ${data.magic_number}
-✅ Status: OK
-      `; //if successful, show the file analysis
-    }) // if something breaks during fetch or processing, catch the error and show a message
-    .catch((err) => {
-      console.error(err);
-      resultBox.innerHTML = "❌ Error scanning file.";
-    });
+  formData.append('file', fileInput.files[0]);
+  const res = await fetch('/scan-file', {method: 'POST', body: formData});
+  const data = await res.json();
+  box.textContent = renderLegacyFileResult(data);
 }
 
-/******************************
- 📨 PHISHING MESSAGE ANALYZER
-******************************/
-
-function analyzePhishing() {
-    const text = document.getElementById("phishText").value.trim(); //Get the text input and trim whitespace
-    if (!text) return;
-
-    fetch("/analyze-phishing", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }) //Send the message to the flask backend for analysis
-    })
-    .then(res => res.json())
-    .then(data => {
-        // Show the box only when results arrive
-        document.getElementById("phishResult").style.display = "block";
-
-        document.getElementById("verdictOutput").textContent = data.verdict;
-        document.getElementById("riskScoreOutput").textContent = data.risk_score;
-
-        const box = document.getElementById("reasonsListBox");
-
-        if (!data.reasons || data.reasons.length === 0) {
-            box.innerHTML = "No suspicious indicators found.";
-        } else {
-            box.innerHTML = data.reasons.map(r => "• " + r).join("<br>");
-        }
-    });
+// File scanner used in dedicated module page
+async function scanFileModule() {
+  const fileInput = document.getElementById('moduleFileInput');
+  const box = document.getElementById('moduleFileResult');
+  if (!fileInput || !box) return;
+  if (!fileInput.files.length) {
+    box.textContent = 'Please choose a file';
+    return;
+  }
+  box.textContent = 'Scanning...';
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+  const res = await fetch('/api/file-scanner', {method: 'POST', body: formData});
+  const data = await res.json();
+  box.textContent = renderFileModuleResult(data);
+  if (!data.error) latestModuleResults.push({module: 'File Scanner', score: data.threat_score || 0, summary: data.threat_verdict});
+  loadDashboard();
 }
-document.getElementById("phishText").addEventListener("keydown", function(e) {
-    if (e.key === "Enter") {
-        e.preventDefault();
-        analyzePhishing();
-    }
-});
 
+async function analyzePhishing() {
+  const text = document.getElementById('phishText')?.value.trim();
+  if (!text) return;
 
-/******************************
- 🔐 PASSWORD STRENGTH CHECKER
-******************************/
-function checkPassword() {
-  const pwd = document.getElementById("passwordInput").value;
-  const resultBox = document.getElementById("passwordResult");
+  const res = await fetch('/analyze-phishing', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({text})
+  });
+  const data = await res.json();
 
+  const result = document.getElementById('phishResult');
+  if (!result) return;
+  result.style.display = 'block';
+  document.getElementById('verdictOutput').textContent = data.verdict || '-';
+  document.getElementById('riskScoreOutput').textContent = data.risk_score ?? '-';
+
+  const box = document.getElementById('reasonsListBox');
+  if (!box) return;
+  if (!data.reasons || !data.reasons.length) {
+    box.innerHTML = 'No suspicious indicators found.';
+  } else {
+    box.innerHTML = data.reasons.map(r => `• ${r}`).join('<br>');
+  }
+}
+
+async function checkPassword() {
+  const pwd = document.getElementById('passwordInput')?.value || '';
+  const box = document.getElementById('passwordResult');
+  if (!box) return;
   if (!pwd.trim()) {
-    resultBox.innerHTML = "❌ Please enter a password.";
+    box.textContent = 'Please enter a password.';
     return;
   }
 
-  resultBox.innerHTML = "⏳ Checking strength...";
+  box.textContent = 'Checking strength...';
+  const res = await fetch('/check-password', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({password: pwd})
+  });
+  const data = await res.json();
+  box.innerHTML = `
+    <div><b>Strength:</b> ${data.strength || '-'}</div>
+    <div><b>Score:</b> ${data.score ?? '-'}/100</div>
+    <div>${(data.feedback || []).map(i => `• ${i}`).join('<br>')}</div>
+  `;
+}
 
-  fetch("/check-password", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ password: pwd })
-  })
-  .then(res => res.json()) //Parse the JSON response
-  .then(data => {
+async function startSimulation() {
+  const box = document.getElementById('simulationResult');
+  if (!box) return;
+  const res = await fetch('/start-simulation');
+  const data = await res.json();
+  box.textContent = JSON.stringify(data, null, 2);
+}
 
-    let suggestionsHTML = "";
-    if (data.feedback && data.feedback.length > 0) {
-      suggestionsHTML = `
-        <div class="suggestions-title">📌 Suggestions:</div>
-        <ul class="suggestions-list">
-          ${data.feedback.map(item => `<li>${item}</li>`).join("")}
-        </ul>
-      `; //Format suggestions as a list
-    }
+async function viewAttacks() {
+  const box = document.getElementById('attackResult');
+  if (!box) return;
+  box.textContent = 'Fetching attacks...';
+  const res = await fetch('/view-attacks');
+  const data = await res.json();
+  box.textContent = JSON.stringify(data, null, 2);
+}
 
-    resultBox.innerHTML = `
-      <div class="result-line"><b>🔐 Strength:</b> ${data.strength}</div>
-      <div class="result-line"><b>📊 Score:</b> ${data.score}/100</div>
-      ${suggestionsHTML}
-    `;
-  })
-  .catch(() => {
-    resultBox.innerHTML = "❌ Error checking password.";
+async function lookupIP() {
+  const indicator = document.getElementById('ipInput')?.value.trim();
+  const box = document.getElementById('ipResult');
+  if (!indicator || !box) return;
+  box.textContent = 'Looking up...';
+  const res = await fetch('/api/ip-lookup', {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({indicator})
+  });
+  const data = await res.json();
+  box.textContent = renderIpResult(data);
+  if (!data.error) latestModuleResults.push({module: 'IP Lookup', score: data.risk_score || 0, summary: 'Lookup complete'});
+  loadDashboard();
+}
+
+async function analyzeEmail() {
+  const headers = document.getElementById('emailHeaders')?.value.trim();
+  const box = document.getElementById('emailResult');
+  if (!headers || !box) return;
+  box.textContent = 'Analyzing headers...';
+  const res = await fetch('/api/email-analyzer', {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({headers})
+  });
+  const data = await res.json();
+  box.textContent = renderEmailResult(data);
+  if (!data.error) latestModuleResults.push({module: 'Email Analyzer', score: data.risk_score || 0, summary: data.verdict});
+  loadDashboard();
+}
+
+async function loadDashboard() {
+  const total = document.getElementById('totalScans');
+  const finalThreat = document.getElementById('finalThreat');
+  const recent = document.getElementById('recentScans');
+  const chartEl = document.getElementById('moduleChart');
+
+  if (!total && !finalThreat && !recent && !chartEl) return;
+
+  const dash = await fetch('/api/dashboard-summary');
+  const data = await dash.json();
+
+  if (total) total.textContent = data.total_scans;
+  if (finalThreat) finalThreat.textContent = `${data.final_threat_score}/100`;
+  if (recent) recent.textContent = JSON.stringify(data.recent_scans, null, 2);
+
+  if (chartEl && window.Chart) {
+    const labels = Object.keys(data.module_counts || {});
+    const values = Object.values(data.module_counts || {});
+    if (moduleChart) moduleChart.destroy();
+    moduleChart = new Chart(chartEl, {
+      type: 'bar',
+      data: {labels, datasets: [{label: 'Scans by Module', data: values, backgroundColor: '#4b8dff'}]},
+      options: {responsive: true}
+    });
+  }
+}
+
+async function exportThreatReport() {
+  const res = await fetch('/api/report', {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({modules: latestModuleResults})
+  });
+  const report = await res.json();
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  let y = 10;
+  doc.setFontSize(16);
+  doc.text('Cyber Security Threat Report', 10, y);
+  y += 10;
+  doc.setFontSize(11);
+  doc.text(`Generated: ${report.generated_at}`, 10, y); y += 8;
+  doc.text(`Final Threat Score: ${report.final_threat_score}/100`, 10, y); y += 8;
+  doc.text('Modules:', 10, y); y += 8;
+  (report.modules || []).forEach((m) => {
+    doc.text(`- ${m.module}: ${m.score} (${m.summary})`, 12, y);
+    y += 7;
+  });
+  y += 5;
+  doc.text('Recommendations:', 10, y); y += 8;
+  (report.recommendations || []).forEach((r) => {
+    doc.text(`- ${r}`, 12, y, {maxWidth: 180});
+    y += 10;
+  });
+  doc.save('threat_report.pdf');
+}
+
+if (window.activePage === 'dashboard') {
+  loadDashboard();
+}
+
+
+function initThemeToggle() {
+  const themeToggle = document.getElementById('themeToggle');
+  if (!themeToggle) return;
+
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'light') {
+    document.body.classList.add('light-mode');
+    themeToggle.innerText = '🌙';
+  }
+
+  themeToggle.addEventListener('click', () => {
+    document.body.classList.toggle('light-mode');
+    const isLight = document.body.classList.contains('light-mode');
+    themeToggle.innerText = isLight ? '🌙' : '☀️';
+    localStorage.setItem('theme', isLight ? 'light' : 'dark');
   });
 }
 
-/******************************
- 🎯 PHISHING SIMULATION - INTERACTIVE QUIZ
-******************************/
-// Tracks current quiz question and score
-let quizIndex = 0;
-let quizScore = 0;
-
-const phishingQuizzes = [ //Array of quiz questions with messages, correct answers, and explanations
-  {
-    message: "🔔 URGENT: Verify your bank account now!\nClick here: secure-banking-dot-tk\n⚠️ Your account will be locked!",
-    isPhishing: true,
-    explanation: "RED FLAGS: Urgency, unusual domain (.tk), misspelled URL, threats of account lockout"
-  },
-  {
-    message: "Hi! Please review the attached invoice for project X. Let me know if you need any clarifications.",
-    isPhishing: false,
-    explanation: "✅ LEGITIMATE: Professional tone, specific context, no urgency or threats, no suspicious links"
-  },
-  {
-    message: "🎁 CONGRATS! You won $1,000,000! Claim now: bit.ly/prize2025\nNo verification needed!",
-    isPhishing: true,
-    explanation: "RED FLAGS: Too good to be true, shortened URL, \"no verification needed\", fake prize"
-  } 
-];
-
-function startSimulation() { //Resets quiz state and starts the quiz
-  const resultBox = document.getElementById("simulationResult");
-  quizIndex = 0;
-  quizScore = 0;
-  showQuiz();
-}
-
-function showQuiz() {
-  const resultBox = document.getElementById("simulationResult");
-  
-  if (quizIndex >= phishingQuizzes.length) {
-    resultBox.innerHTML = `
-      <div class="quiz-complete">
-        🎉 <b>Quiz Complete!</b><br>
-        Your Score: ${quizScore}/${phishingQuizzes.length} ✅<br><br>
-        <button onclick="startSimulation()" style="width: 100%; padding: 10px;">🔄 Retry Quiz</button>
-      </div>
-    `;
-    return;
-  }
-
-  const quiz = phishingQuizzes[quizIndex];
-  resultBox.innerHTML = `
-    <div class="quiz-container">
-      <div class="quiz-question">
-        <b>Question ${quizIndex + 1}/${phishingQuizzes.length}</b><br><br>
-        "${quiz.message}"
-      </div>
-      <div class="quiz-options">
-        <button class="quiz-option" onclick="answerQuiz(true)">🚨 PHISHING</button>
-        <button class="quiz-option" onclick="answerQuiz(false)">✅ LEGITIMATE</button>
-      </div>
-    </div>
-  `;
-}
-
-function answerQuiz(userAnswer) {
-  const resultBox = document.getElementById("simulationResult");
-  const quiz = phishingQuizzes[quizIndex];
-  const isCorrect = userAnswer === quiz.isPhishing;
-
-  if (isCorrect) quizScore++;
-
-  const feedback = isCorrect 
-    ? `✅ <b>CORRECT!</b>` 
-    : `❌ <b>WRONG!</b> It was actually ${quiz.isPhishing ? "PHISHING" : "LEGITIMATE"}`;
-
-  resultBox.innerHTML = `
-    <div class="quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}">
-      ${feedback}<br><br>
-      <b>Why:</b> ${quiz.explanation}<br><br>
-      <button onclick="nextQuestion()" style="width: 100%; padding: 10px;">Next Question →</button>
-    </div>
-  `;
-}
-
-function nextQuestion() {
-  quizIndex++;
-  showQuiz();
-}
-
-
-/******************************
- 🌐 LIVE ATTACK VIEWER
-******************************/
-function viewAttacks() {
-  const resultBox = document.getElementById("attackResult");
-
-  resultBox.innerHTML = "⏳ Fetching attacks...";
-
-  fetch("/view-attacks")
-    .then(res => res.json())
-    .then(data => {
-      const attacksHtml = data.attacks.map(a => `
-        🚨 <b>Attack Type:</b> ${a.type}<br>
-        🖥 <b>Source IP:</b> ${a.src}<br>
-        ⏱ <b>Time:</b> ${a.time}<br><hr>
-      `).join("");
-
-      resultBox.innerHTML = attacksHtml;
-    })
-    .catch(() => {
-      resultBox.innerHTML = "❌ Error loading attacks.";
-    });
-}
-
-function toggleAI() {
-  const chat = document.getElementById("ai-chat");
-  chat.style.display = chat.style.display === "flex" ? "none" : "flex";
-}
-
-async function askAI() {
-  const input = document.getElementById("ai-question");
-  const msgBox = document.getElementById("ai-messages");
-  const question = input.value.trim();
-
-  if (!question) return;
-
-  msgBox.innerHTML += `<div><b>You:</b> ${question}</div>`;
-  input.value = "";
-
-  try {
-    const res = await fetch("/ask-ai", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question })
-    });
-
-    const data = await res.json();
-    msgBox.innerHTML += `<div><b>AI:</b> ${data.answer}</div>`;
-    msgBox.scrollTop = msgBox.scrollHeight;
-  } catch {
-    msgBox.innerHTML += `<div style="color:red">AI service error</div>`;
-  }
-}
 function toggleChat() {
-  const chat = document.getElementById("chat-widget");
-  const isOpen = chat.style.display === "flex";
-  chat.style.display = isOpen ? "none" : "flex";
-  if (!isOpen) {
-    // give browser a moment to render then focus the input so user can type immediately
+  const chat = document.getElementById('chat-widget');
+  if (!chat) return;
+  const isOpen = chat.classList.contains('open');
+  if (isOpen) {
+    chat.classList.remove('open');
+  } else {
+    chat.classList.add('open');
     setTimeout(() => {
-      const input = document.getElementById("chat-text");
+      const input = document.getElementById('chat-text');
       if (input) input.focus();
     }, 60);
   }
 }
 
-function sendChat() {
-  const input = document.getElementById("chat-text");
-  const msgBox = document.getElementById("chat-messages");
+function appendChatMessage(role, text) {
+  const msgBox = document.getElementById('chat-messages');
+  if (!msgBox) return;
+
+  const bubble = document.createElement('div');
+  bubble.className = `chat-msg ${role}`;
+  bubble.textContent = text;
+  msgBox.appendChild(bubble);
+  msgBox.scrollTop = msgBox.scrollHeight;
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-text');
+  const msgBox = document.getElementById('chat-messages');
   if (!input || !msgBox) return;
 
   const text = input.value.trim();
   if (!text) return;
-  // append user's message locally (safe)
-  createMessage(msgBox, 'user', text);
-  msgBox.scrollTop = msgBox.scrollHeight;
-  input.value = "";
 
-  // send to backend if available
-  fetch("/ask-ai", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question: text })
-  })
-  .then(res => res.json())
-  .then(data => {
-    const answer = data.answer || '[no response]';
-    createMessage(msgBox, 'ai', answer);
-    msgBox.scrollTop = msgBox.scrollHeight;
-  })
-  .catch(err => {
+  appendChatMessage('user', text);
+  input.value = '';
+
+  try {
+    const res = await fetch('/ask-ai', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({question: text})
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      appendChatMessage('ai', data.answer || "I'm in offline mode right now.");
+      return;
+    }
+    appendChatMessage('ai', data.answer || "I'm in offline mode right now.");
+  } catch (err) {
     console.error(err);
-    createMessage(msgBox, 'ai', 'AI service error');
-    msgBox.scrollTop = msgBox.scrollHeight;
-  });
-}
-
-// create a safe formatted message element
-function createMessage(container, role, text) {
-  const wrapper = document.createElement('div');
-  wrapper.className = 'message ' + (role === 'user' ? 'user' : 'ai');
-
-  const body = document.createElement('div');
-  body.className = 'body';
-
-  // Escape HTML then preserve line breaks
-  const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const parts = escaped.split('\n');
-  parts.forEach((part, idx) => {
-    const span = document.createElement('span');
-    span.textContent = part;
-    body.appendChild(span);
-    if (idx !== parts.length - 1) body.appendChild(document.createElement('br'));
-  });
-
-  wrapper.appendChild(body);
-  
-  // For AI messages, collapse long responses and add an expand button
-  if (role === 'ai') {
-    // after rendering, check height
-    setTimeout(() => {
-      if (body.scrollHeight > 160) {
-        body.classList.add('collapsed');
-
-        const btn = document.createElement('button');
-        btn.className = 'expand-btn';
-        btn.textContent = 'Expand';
-        btn.onclick = () => {
-          const expanded = body.classList.toggle('collapsed');
-          if (body.classList.contains('collapsed')) {
-            btn.textContent = 'Expand';
-          } else {
-            btn.textContent = 'Collapse';
-          }
-          // scroll the container to show the toggled content
-          container.scrollTop = container.scrollHeight;
-        };
-
-        const ctrl = document.createElement('div');
-        ctrl.style.marginTop = '6px';
-        ctrl.appendChild(btn);
-        wrapper.appendChild(ctrl);
-      }
-    }, 30);
+    appendChatMessage('ai', "I'm in offline mode right now. Try questions like: What is phishing? How to stay safe from malware?");
   }
-  container.appendChild(wrapper);
 }
 
-/******************************
- ⌨️ ENTER KEY SUPPORT
-******************************/
-document.addEventListener("keydown", function (e) {
-  if (e.key === "Enter") { //When Enter key is pressed
-    const active = document.activeElement;
+document.addEventListener('DOMContentLoaded', () => {
+  initThemeToggle();
 
-    if (active && active.id === "phishText") {
-      analyzePhishing();
-    }
-
-    if (active && active.id === "passwordInput") {
-      checkPassword();
-    }
-    if (active && active.id === "chat-text") {
-      // prevent form submission-like behavior
-      e.preventDefault();
-      sendChat();
-    }
+  const input = document.getElementById('chat-text');
+  if (input) {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        sendChat();
+      }
+    });
   }
 });
